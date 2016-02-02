@@ -1,0 +1,41 @@
+{
+  "name": "ecs-task-deploy",
+  "version": "0.0.0",
+  "description": "Update an ECS task definition with Docker image and trigger blue/green deployment",
+  "keywords": [
+    "aws",
+    "ecs",
+    "docker"
+  ],
+  "author": {
+    "name": "Mike Stead",
+    "url": "https://github.com/mikestead"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/mikestead/ecs-task-deploy",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mikestead/ecs-task-deploy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mikestead/ecs-task-deploy/issues"
+  },
+  "engines": {
+    "node": ">=4.0.0",
+    "npm": ">=2.14.2"
+  },
+  "scripts": {
+    "lint": "eslint src test",
+    "test": "mocha --recursive"
+  },
+  "bin": {
+    "ecs-task-deploy": "index.js"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.2.33",
+    "aws-sdk-promise": "0.0.2",
+    "chalk": "^1.1.1",
+    "commander": "^2.9.0"
+  },
+  "devDependencies": {}
+}
