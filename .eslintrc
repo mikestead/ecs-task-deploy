@@ -11,7 +11,7 @@
     "array-bracket-spacing": [ 2, "always" ],
     "comma-dangle": [ 2, "never" ],
     "eol-last": 2,
-    "indent": [2, "tab"],
+    "indent": [2, 2],
     "no-multiple-empty-lines": 2,
     "no-unused-vars": 2,
     "no-console": 0,
