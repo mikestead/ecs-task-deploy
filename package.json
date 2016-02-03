@@ -5,6 +5,7 @@
   "keywords": [
     "aws",
     "ecs",
+    "deploy",
     "docker"
   ],
   "author": {
