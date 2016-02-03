@@ -1,6 +1,6 @@
 {
   "name": "ecs-task-deploy",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Update an ECS task definition with Docker image and trigger blue/green deployment",
   "keywords": [
     "aws",
@@ -24,12 +24,12 @@
     "node": ">=4.0.0",
     "npm": ">=2.14.2"
   },
-  "scripts": {
-    "lint": "eslint src test",
-    "test": "mocha --recursive"
-  },
+  "main": "src/index.js",
   "bin": {
-    "ecs-task-deploy": "index.js"
+    "ecs-task-deploy": "src/run.js"
+  },
+  "scripts": {
+    "lint": "eslint src test"
   },
   "dependencies": {
     "aws-sdk": "^2.2.33",
@@ -37,5 +37,7 @@
     "chalk": "^1.1.1",
     "commander": "^2.9.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "eslint": "^1.10.3"
+  }
 }
