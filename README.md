@@ -6,7 +6,7 @@ Sequence of steps performed by the script:
 
 1. Download the active task definition of an ECS service.
 1. Clone it.
-1. Given the Docker image name provided, find any containers in the task definition with references to it and replace them with the new one. Docker tags are ignored when searching for a match.
+1. Given the Docker image name provided, find *any* containers in the task definition with references to it and replace them with the new one. Docker tags are ignored when searching for a match.
 1. Register this new task definition with ECS.
 1. Update the service to use this new task definition, triggering a blue/green deployment.
 
@@ -49,6 +49,7 @@ To run in code.
 
 ```javascript
 const ecsTaskDeploy = require('ecs-task-deploy')
+
 ecsTaskDeploy({
   awsAccessKey: 'ABCD',
   awsSecretKey: 'SECRET',
@@ -58,14 +59,14 @@ ecsTaskDeploy({
   image: 'redis:2.8'
 })
 .then(
-  taskDef => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`, 
+  taskDef => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`), 
   e => console.error(e)
 )
 ```
 
 ##### Docker
 
-Run with arguments
+Run with arguments.
 
     docker run --rm stead/ecs-task-deploy \
         -k <key>
@@ -75,7 +76,7 @@ Run with arguments
         -n <service-name> \
         -i <image-name>
 
-Run with standard AWS environment variables
+Run with standard AWS environment variables.
 
     docker run --rm \
         -e AWS_DEFAULT_REGION=<region>  \
