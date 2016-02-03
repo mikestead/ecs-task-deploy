@@ -1,6 +1,6 @@
 # ECS Task Deploy
 
-A script to increment an active task definition on ECS with an updated Docker image, followed by a service update to use it.
+A script to increment an active task definition on [ECS](https://aws.amazon.com/ecs) with an updated Docker image, followed by a service update to use it.
 
 Sequence of steps performed by the script:
 
