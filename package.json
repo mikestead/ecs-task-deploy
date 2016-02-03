@@ -1,6 +1,6 @@
 {
   "name": "ecs-task-deploy",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Update an ECS task definition with Docker image and trigger blue/green deployment",
   "keywords": [
     "aws",
