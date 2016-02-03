@@ -30,7 +30,7 @@
     "ecs-task-deploy": "src/run.js"
   },
   "scripts": {
-    "lint": "eslint src test"
+    "lint": "eslint src"
   },
   "dependencies": {
     "aws-sdk": "^2.2.33",
