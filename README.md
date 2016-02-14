@@ -69,9 +69,9 @@ ecsTaskDeploy({
 Run with arguments.
 
     docker run --rm stead/ecs-task-deploy \
-        -k <key>
-        -s <secret>
-        -r <region>
+        -k <key> \
+        -s <secret> \
+        -r <region> \
         -c <cluster> \
         -n <service-name> \
         -i <image-name>
