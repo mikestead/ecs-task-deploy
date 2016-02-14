@@ -35,9 +35,9 @@ To run via cli.
     
 ```javascript
 ecs-task-deploy \
-    -k 'ABCD'
-    -s 'SECRET'
-    -r 'us-west-1'
+    -k 'ABCD' \
+    -s 'SECRET' \
+    -r 'us-west-1' \
     -c 'qa' \
     -n 'website-service' \
     -i '44444444.ddd.ecr.us-east-1.amazonaws.com/website:1.0.2'
