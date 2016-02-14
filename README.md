@@ -59,7 +59,7 @@ ecsTaskDeploy({
   image: 'redis:2.8'
 })
 .then(
-  taskDef => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`), 
+  newTask => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`), 
   e => console.error(e)
 )
 ```
