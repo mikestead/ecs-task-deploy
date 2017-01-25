@@ -1,5 +1,7 @@
 # ECS Task Deploy
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/mikestead/ecs-task-deploy.svg)](https://greenkeeper.io/)
+
 A script to increment an active task definition on [ECS](https://aws.amazon.com/ecs) with an updated Docker image, followed by a service update to use it.
 
 Sequence of steps performed by the script:
