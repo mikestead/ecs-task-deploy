@@ -8,7 +8,6 @@ module.exports = execute
 function execute(options) {
   return verifyOptions(options)
     .then(deployTaskDefinition)
-
 }
 
 function verifyOptions(options) {
@@ -23,6 +22,7 @@ function verifyOptions(options) {
     process.env.AWS_ACCESS_KEY_ID = options.awsAccessKey
     process.env.AWS_SECRET_ACCESS_KEY = options.awsSecretKey
     options.image = parseImagePath(options.image)
+    if (!options.timeout) options.timeout = 180
 
     return Promise.resolve(options)
   } catch(e) {
@@ -36,6 +36,7 @@ function deployTaskDefinition(options) {
     .then(service => getActiveTaskDefinition(ecs, service, options))
     .then(taskDef => addNewTaskDefinition(ecs, taskDef, options))
     .then(taskDef => updateService(ecs, taskDef, options))
+    .then(service => checkForTaskKill(ecs, service, options))
     .then(service => waitForServiceUpdate(ecs, service, options))
 }
 
@@ -91,6 +92,31 @@ function createServiceOptions(taskDef, options) {
   }
 }
 
+function checkForTaskKill(ecs, service, options) {
+  if (options.killTask) {
+    if (options.verbose) console.info('searching for running task to stop')
+    return ecs.listTasks({ cluster: options.cluster, serviceName: options.service }).promise().then(res => {
+      if (res.data && res.data.taskArns && res.data.taskArns.length) {
+        const task = res.data.taskArns[0]
+        if (options.verbose) console.info(`stopping task '${task}'`)
+        return ecs.stopTask({ cluster: options.cluster, task, reason: 'Making room for blue/green deployment' }).promise()
+          .then(() => {
+            if (options.verbose) console.info(`task '${task}' stopped`)
+          }, (error) => {
+            console.warn(`failed to stop task '${task}'`, error)
+          })
+      } else {
+        console.info('failed to find a running task to stop')
+      }
+    }, (error) => {
+      console.warn(`failed to list tasks under service '${options.service}' in cluster '${options.cluster}'`, error)
+    })
+    .then(() => service)
+    .catch(() => service)
+  }
+  return service
+}
+
 function waitForServiceUpdate(ecs, service, options) {
   return new Promise((resolve, reject) => {
     const WAIT_TIME = 1000
@@ -98,7 +124,10 @@ function waitForServiceUpdate(ecs, service, options) {
     const START_TIME = Date.now()
 
     function wait() {
-      if (options.verbose) console.info('waiting for service update...')
+      if (options.verbose) {
+        const remaining = MAX_TIMEOUT - (Date.now() - START_TIME)
+        console.info(`waiting for service update, ${Math.round(remaining / 1000)}s remaining...`)
+      }
       ecs.listTasks({
         cluster: service.info.clusterArn,
         serviceName: service.info.serviceName,
@@ -114,14 +143,14 @@ function waitForServiceUpdate(ecs, service, options) {
             if (task) {
               resolve(task)
             } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
-              reject(new Error('Timeout waiting for service to launch new task definition'))
+              reject(new Error('timeout waiting for service to launch new task definition'))
             } else {
               setTimeout(wait, WAIT_TIME)
             }
           })
           .catch(e => reject(e))
         } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
-          reject(new Error('Timeout waiting for service to launch new task definition'))
+          reject(new Error('timeout waiting for service to launch new task definition'))
         } else {
           setTimeout(wait, WAIT_TIME)
         }
