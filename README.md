@@ -12,6 +12,16 @@ Sequence of steps performed by the script:
 1. Register this new task definition with ECS.
 1. Update the service to use this new task definition, triggering a blue/green deployment.
 
+#### Spare Capacity
+
+In order to roll a blue/green deployment there must be spare capacity available to spin up a task based on your updated task definition.
+If there's not capacity to do this your deployment will fail.
+
+An alternate option provided by this tool is `--kill-task`. This will attempt to stop an existing task, making way for the blue/green rollout.
+
+This has obvious implications, reducing your horizontal scale by one during the deployment. If you're only running a single task
+you'll experience some down time. **Use at your own risk.**
+
 #### Usage
 
     ecs-task-deploy [options]
@@ -28,6 +38,7 @@ Sequence of steps performed by the script:
     -i, --image <i>           docker image for task definition, or via AWS_ECS_TASK_IMAGE env variable
     -t, --timeout <t>         max timeout (sec) for ECS service to launch new task, defaults to 90s
     -v, --verbose             enable verbose mode
+    --kill-task               stop a running task to allow space for a rolling blue/green deployment
 
 ##### Node
 
@@ -42,7 +53,8 @@ ecs-task-deploy \
     -r 'us-west-1' \
     -c 'qa' \
     -n 'website-service' \
-    -i '44444444.ddd.ecr.us-east-1.amazonaws.com/website:1.0.2'
+    -i '44444444.ddd.ecr.us-east-1.amazonaws.com/website:1.0.2' \
+    -v
 ```
 
 To run in code.
@@ -55,10 +67,11 @@ const ecsTaskDeploy = require('ecs-task-deploy')
 ecsTaskDeploy({
   awsAccessKey: 'ABCD',
   awsSecretKey: 'SECRET',
-  region: 'us-east-1'
+  region: 'us-east-1',
   cluster: 'cache-cluster',
   service: 'cache-service',
-  image: 'redis:2.8'
+  image: 'redis:2.8',
+  killTask: true
 })
 .then(
   newTask => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`), 

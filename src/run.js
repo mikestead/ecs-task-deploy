@@ -14,15 +14,16 @@ program
   .option('-c, --cluster <c>', 'ecs cluster, can be defined via AWS_ECS_CLUSTER env variable', String, env.AWS_ECS_CLUSTER)
   .option('-n, --service <n>', 'ecs service, can be defined via AWS_ECS_SERVICE_NAME env variable', String, env.AWS_ECS_SERVICE_NAME)
   .option('-i, --image <i>', 'docker image to use in new task definition e.g. user/image:tag, can be defined via AWS_ECS_TASK_IMAGE env variable', String, env.AWS_ECS_TASK_IMAGE)
-  .option('-t, --timeout <t>', 'maximum timeout (sec) to wait for ECS service to launch new task, defaults to 90', parseInt, '90')
+  .option('-t, --timeout <t>', 'maximum timeout (sec) to wait for ECS service to launch new task, defaults to 180', parseInt, '180')
   .option('-v, --verbose', 'enable verbose mode')
+  .option('--kill-task', 'stop a running task to allow space for a rolling blue/green deployment')
   .parse(process.argv)
 
 execute(program)
   .then(newTask => complete(newTask), e => error(e))
 
 function complete(newTask) {
-  console.info(chalk.bold.cyan(`Task '${newTask.taskDefinitionArn}' created and deployed`))
+  console.info(chalk.bold.cyan(`task '${newTask.taskDefinitionArn}' created and deployed`))
   process.exit(0)
 }
 
