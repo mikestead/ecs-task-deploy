@@ -6,18 +6,19 @@ Sequence of steps performed by the script:
 
 1. Download the active task definition of an ECS service.
 1. Clone it.
-1. Given the Docker image name provided, find *any* containers in the task definition with references to it and replace them with the new one. Docker tags are ignored when searching for a match.
+1. Given the Docker image name provided, find *all* containers in the task definition with references to it and replace them with the new one. Docker tags are ignored when searching for a match.
 1. Register this new task definition with ECS.
 1. Update the service to use this new task definition, triggering a blue/green deployment.
+1. If the update fails, roll the service back to the previous task definition.
 
 #### Spare Capacity
 
-In order to roll a blue/green deployment there must be spare capacity available to spin up a task based on your updated task definition.
-If there's not capacity to do this your deployment will fail.
+In order to roll a blue/green deployment there must be spare capacity available to spin up a task based on your updated task
+definition. If there's not capacity to do this your deployment will fail.
 
 An alternate option provided by this tool is `--kill-task`. This will attempt to stop an existing task, making way for the blue/green rollout.
 
-This has obvious implications, reducing your horizontal scale by one during the deployment. If you're only running a single task
+This has obvious implications, reducing your inital scale by one during the deployment. If you're only running a single task
 you'll experience some down time. **Use at your own risk.**
 
 #### Usage

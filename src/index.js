@@ -1,13 +1,13 @@
 'use strict'
 
-const AWS = require('aws-sdk-promise')
+const AWS = require('aws-sdk')
 const assert = require('assert')
+const merge = Object.assign
 
 module.exports = execute
 
 function execute(options) {
-  return verifyOptions(options)
-    .then(deployTaskDefinition)
+  return verifyOptions(options).then(deployTaskDefinition)
 }
 
 function verifyOptions(options) {
@@ -25,41 +25,70 @@ function verifyOptions(options) {
     if (!options.timeout) options.timeout = 180
 
     return Promise.resolve(options)
-  } catch(e) {
+  } catch (e) {
     return Promise.reject(e)
   }
 }
 
 function deployTaskDefinition(options) {
-  const ecs = new AWS.ECS({ region: options.region })
-  return getService(ecs, options)
-    .then(service => getActiveTaskDefinition(ecs, service, options))
-    .then(taskDef => addNewTaskDefinition(ecs, taskDef, options))
-    .then(taskDef => updateService(ecs, taskDef, options))
-    .then(service => checkForTaskKill(ecs, service, options))
-    .then(service => waitForServiceUpdate(ecs, service, options))
+  const ecs = new AWS.ECS({ region: options.region, apiVersion: '2014-11-13' })
+  return getService(ecs, { errors: [] }, options)
+    .then(ctx => getActiveTaskDefinition(ecs, ctx, options))
+    .then(ctx => addNewTaskDefinition(ecs, ctx, options))
+    .then(ctx => updateServiceTaskDef(ecs, ctx, options))
+    .then(ctx => checkForRollback(ecs, ctx, options))
+    .then(ctx => checkRollbackOutcome(ecs, ctx, options))
 }
 
-function getService(ecs, options) {
-  return ecs.describeServices({ cluster: options.cluster, services: [ options.service ] }).promise()
-      .then(res => res.data.services.find(service => service.serviceName == options.service))
+function getService(ecs, ctx, options) {
+  return ecs
+    .describeServices({ cluster: options.cluster, services: [options.service] })
+    .promise()
+    .then(data => {
+      const service = data.services.find(
+        service => service.serviceName == options.service
+      )
+      assert.ok(
+        service,
+        `Failed to find ECS service with name "${options.service}"`
+      )
+      return merge(ctx, { service })
+    })
 }
 
-function getActiveTaskDefinition(ecs, service, options) {
+function getActiveTaskDefinition(ecs, ctx, options) {
   if (options.verbose) console.info('get active task definition')
-  return ecs.describeTaskDefinition({ taskDefinition: service.taskDefinition }).promise().then(res => res.data.taskDefinition)
+  return ecs
+    .describeTaskDefinition({ taskDefinition: ctx.service.taskDefinition })
+    .promise()
+    .then(data => merge(ctx, { originalTaskDef: data.taskDefinition }))
 }
 
-function addNewTaskDefinition(ecs, template, options) {
-  if (options.verbose) console.info(`registering new task definition with image '${options.image.uri}'`)
-  const newTaskDef = newTaskDefinition(template, options)
-  return ecs.registerTaskDefinition(newTaskDef).promise().then(res => res.data.taskDefinition)
+function addNewTaskDefinition(ecs, ctx, options) {
+  if (options.verbose)
+    console.info(
+      `registering new task definition with image '${options.image.uri}'`
+    )
+  const newTaskDef = newTaskDefinition(ctx.originalTaskDef, options)
+  return ecs.registerTaskDefinition(newTaskDef).promise().then(data =>
+    merge(ctx, {
+      newTaskDef: data.taskDefinition,
+      targetTaskDef: data.taskDefinition
+    })
+  )
 }
 
 function newTaskDefinition(template, options) {
-  const containerDefinitions = template.containerDefinitions.map(c => Object.assign({}, c))
-  const containers = containerDefinitions.filter(c => parseImagePath(c.image).id === options.image.id)
-  assert.ok(containers.length, `No container definitions found with image '${options.image.id}', aborting.`)
+  const containerDefinitions = template.containerDefinitions.map(c =>
+    Object.assign({}, c)
+  )
+  const containers = containerDefinitions.filter(
+    c => parseImagePath(c.image).id === options.image.id
+  )
+  assert.ok(
+    containers.length,
+    `No container definitions found with image '${options.image.id}', aborting.`
+  )
   containers.forEach(c => c.image = options.image.uri)
 
   return {
@@ -74,14 +103,26 @@ function parseImagePath(uri) {
   const last = segments.pop()
   const parts = last.split(':')
   const tag = parts.length > 1 ? parts.pop() : ''
-  const id = segments.concat([ parts.join(':') ]).join('/')
+  const id = segments.concat([parts.join(':')]).join('/')
   return { uri, id, tag }
 }
 
-function updateService(ecs, taskDef, options) {
-  if (options.verbose) console.info(`update service with new task definition '${taskDef.taskDefinitionArn}'`)
-  const serviceOptions = createServiceOptions(taskDef, options)
-  return ecs.updateService(serviceOptions).promise().then(res => ({ info: res.data.service, taskDef }))
+function updateServiceTaskDef(ecs, ctx, options) {
+  return updateService(ecs, ctx, options)
+    .then(context => checkForTaskKill(ecs, ctx, options))
+    .then(context => waitForServiceUpdate(ecs, ctx, options))
+}
+
+function updateService(ecs, ctx, options) {
+  if (options.verbose)
+    console.info(
+      `update service with new task definition '${ctx.targetTaskDef.taskDefinitionArn}'`
+    )
+  const serviceOptions = createServiceOptions(ctx.targetTaskDef, options)
+  return ecs
+    .updateService(serviceOptions)
+    .promise()
+    .then(data => ({ info: data.service, taskDef }))
 }
 
 function createServiceOptions(taskDef, options) {
@@ -92,33 +133,51 @@ function createServiceOptions(taskDef, options) {
   }
 }
 
-function checkForTaskKill(ecs, service, options) {
+function checkForTaskKill(ecs, ctx, options) {
   if (options.killTask) {
     if (options.verbose) console.info('searching for running task to stop')
-    return ecs.listTasks({ cluster: options.cluster, serviceName: options.service }).promise().then(res => {
-      if (res.data && res.data.taskArns && res.data.taskArns.length) {
-        const task = res.data.taskArns[0]
-        if (options.verbose) console.info(`stopping task '${task}'`)
-        return ecs.stopTask({ cluster: options.cluster, task, reason: 'Making room for blue/green deployment' }).promise()
-          .then(() => {
-            if (options.verbose) console.info(`task '${task}' stopped`)
-          }, (error) => {
-            console.warn(`failed to stop task '${task}'`, error)
-          })
-      } else {
-        console.info('failed to find a running task to stop')
-      }
-    }, (error) => {
-      console.warn(`failed to list tasks under service '${options.service}' in cluster '${options.cluster}'`, error)
-    })
-    .then(() => service)
-    .catch(() => service)
+    return ecs
+      .listTasks({ cluster: options.cluster, serviceName: options.service })
+      .promise()
+      .then(
+        data => {
+          if (data && data.taskArns && data.taskArns.length) {
+            const task = data.taskArns[0]
+            if (options.verbose) console.info(`stopping task '${task}'`)
+            return ecs
+              .stopTask({
+                cluster: options.cluster,
+                task,
+                reason: 'Making room for blue/green deployment'
+              })
+              .promise()
+              .then(
+                () => {
+                  if (options.verbose) console.info(`task '${task}' stopped`)
+                },
+                error => {
+                  console.warn(`failed to stop task '${task}'`, error)
+                }
+              )
+          } else {
+            console.info('failed to find a running task to stop')
+          }
+        },
+        error => {
+          console.warn(
+            `failed to list tasks under service '${options.service}' in cluster '${options.cluster}'`,
+            error
+          )
+        }
+      )
+      .then(() => ctx)
+      .catch(() => ctx)
   }
-  return service
+  return ctx
 }
 
-function waitForServiceUpdate(ecs, service, options) {
-  return new Promise((resolve, reject) => {
+function waitForServiceUpdate(ecs, ctx, options) {
+  return new Promise(resolve => {
     const WAIT_TIME = 1000
     const MAX_TIMEOUT = options.timeout * 1000
     const START_TIME = Date.now()
@@ -126,36 +185,93 @@ function waitForServiceUpdate(ecs, service, options) {
     function wait() {
       if (options.verbose) {
         const remaining = MAX_TIMEOUT - (Date.now() - START_TIME)
-        console.info(`waiting for service update, ${Math.round(remaining / 1000)}s remaining...`)
+        console.info(
+          `waiting for service update, ${Math.round(remaining / 1000)}s remaining...`
+        )
       }
-      ecs.listTasks({
-        cluster: service.info.clusterArn,
-        serviceName: service.info.serviceName,
-        desiredStatus: 'RUNNING'
-      }).promise().then(res => {
-        const tasks = res.data.taskArns || []
-        if (tasks.length) {
-          ecs.describeTasks({
-            tasks,
-            cluster: service.info.clusterArn
-          }).promise().then(res => {
-            const task = res.data.tasks.find(task => task.taskDefinitionArn === service.taskDef.taskDefinitionArn)
-            if (task) {
-              resolve(task)
-            } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
-              reject(new Error('timeout waiting for service to launch new task definition'))
-            } else {
-              setTimeout(wait, WAIT_TIME)
-            }
-          })
-          .catch(e => reject(e))
-        } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
-          reject(new Error('timeout waiting for service to launch new task definition'))
-        } else {
-          setTimeout(wait, WAIT_TIME)
-        }
-      })
+      ecs
+        .listTasks({
+          cluster: service.info.clusterArn,
+          serviceName: service.info.serviceName,
+          desiredStatus: 'RUNNING'
+        })
+        .promise()
+        .then(res => {
+          const tasks = data.taskArns || []
+          if (tasks.length) {
+            ecs
+              .describeTasks({
+                tasks,
+                cluster: service.info.clusterArn
+              })
+              .promise()
+              .then(res => {
+                const newTask = data.tasks.find(
+                  task =>
+                    task.taskDefinitionArn === service.taskDef.taskDefinitionArn
+                )
+                if (newTask) {
+                  resolve(merge(ctx, { newTask }))
+                } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
+                  ctx.errors.push(new TimeoutError())
+                  resolve(ctx)
+                } else {
+                  setTimeout(wait, WAIT_TIME)
+                }
+              })
+              .catch(e => resolve(merge(ctx, { error: e })))
+          } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
+            ctx.errors.push(new TimeoutError())
+            resolve(ctx)
+          } else {
+            setTimeout(wait, WAIT_TIME)
+          }
+        })
     }
     wait()
   })
 }
+
+function checkForRollback(ecs, ctx, options) {
+  if (ctx.errors.length) {
+    console.warn(
+      'service update failed using new task definition, rolling back to previous task definition'
+    )
+    ctx.rollback = true
+    ctx.targetTaskDef = ctx.originalTaskDef
+    return updateServiceTaskDef(ecs, ctx, options)
+  }
+  return ctx
+}
+
+function checkRollbackOutcome(ecs, ctx, options) {
+  if (!ctx.rollback) return ctx
+  if (
+    ctx.newTask &&
+    ctx.newTask.taskDefinitionArn === ctx.originalTaskDef.taskDefinitionArn
+  ) {
+    if (options.verbose)
+      console.info(
+        `rollback to task definition "${ctx.originalTaskDef.taskDefinitionArn}" successful`
+      )
+  } else {
+    if (options.verbose)
+      console.warn(
+        `rollback to task definition "${ctx.originalTaskDef.taskDefinitionArn}" failed`
+      )
+    ctx.errors.push(
+      new Error(
+        `failed rollback to previous task definition "${ctx.originalTaskDef.taskDefinitionArn}"`
+      )
+    )
+  }
+  return ctx
+}
+
+function TimeoutError(message) {
+  this.message =
+    message || 'timeout waiting for service to launch new task definition'
+  this.name = this.constructor.name
+  this.stack = new Error().stack
+}
+TimeoutError.prototype = Object.create(Error.prototype)
