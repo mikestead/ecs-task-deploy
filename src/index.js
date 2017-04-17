@@ -1,23 +1,29 @@
 'use strict'
 
 const AWS = require('aws-sdk')
-const assert = require('assert')
 const merge = Object.assign
 
-module.exports = execute
+module.exports = exports = execute
 
 function execute(options) {
-  return verifyOptions(options).then(deployTaskDefinition)
+  return verifyOptions(options).then(() => {
+    const ecs = new AWS.ECS({
+      region: options.region,
+      apiVersion: '2014-11-13'
+    })
+    const ctx = { errors: [] }
+    return deployTaskDefinition(ecs, ctx, options)
+  })
 }
 
 function verifyOptions(options) {
   try {
-    assert.ok(options.awsAccessKey, 'AWS access key missing')
-    assert.ok(options.awsSecretKey, 'AWS secret key missing')
-    assert.ok(options.region, 'AWS region missing')
-    assert.ok(options.cluster, 'ECS cluster name missing')
-    assert.ok(options.service, 'ECS service name missing')
-    assert.ok(options.image, 'ECS image name missing')
+    assert(options.awsAccessKey, 'AWS access key missing')
+    assert(options.awsSecretKey, 'AWS secret key missing')
+    assert(options.region, 'AWS region missing')
+    assert(options.cluster, 'ECS cluster name missing')
+    assert(options.service, 'ECS service name missing')
+    assert(options.image, 'ECS image name missing')
 
     process.env.AWS_ACCESS_KEY_ID = options.awsAccessKey
     process.env.AWS_SECRET_ACCESS_KEY = options.awsSecretKey
@@ -30,9 +36,8 @@ function verifyOptions(options) {
   }
 }
 
-function deployTaskDefinition(options) {
-  const ecs = new AWS.ECS({ region: options.region, apiVersion: '2014-11-13' })
-  return getService(ecs, { errors: [] }, options)
+function deployTaskDefinition(ecs, ctx, options) {
+  return getService(ecs, ctx, options)
     .then(ctx => getActiveTaskDefinition(ecs, ctx, options))
     .then(ctx => addNewTaskDefinition(ecs, ctx, options))
     .then(ctx => updateServiceTaskDef(ecs, ctx, options))
@@ -48,7 +53,7 @@ function getService(ecs, ctx, options) {
       const service = data.services.find(
         service => service.serviceName == options.service
       )
-      assert.ok(
+      assert(
         service,
         `Failed to find ECS service with name "${options.service}"`
       )
@@ -85,7 +90,7 @@ function newTaskDefinition(template, options) {
   const containers = containerDefinitions.filter(
     c => parseImagePath(c.image).id === options.image.id
   )
-  assert.ok(
+  assert(
     containers.length,
     `No container definitions found with image '${options.image.id}', aborting.`
   )
@@ -108,9 +113,9 @@ function parseImagePath(uri) {
 }
 
 function updateServiceTaskDef(ecs, ctx, options) {
-  return updateService(ecs, ctx, options)
-    .then(context => checkForTaskKill(ecs, ctx, options))
-    .then(context => waitForServiceUpdate(ecs, ctx, options))
+  return updateService(ecs, ctx, options).then(context =>
+    waitForServiceUpdate(ecs, ctx, options)
+  )
 }
 
 function updateService(ecs, ctx, options) {
@@ -122,58 +127,25 @@ function updateService(ecs, ctx, options) {
   return ecs
     .updateService(serviceOptions)
     .promise()
-    .then(data => ({ info: data.service, taskDef }))
+    .then(data => merge(ctx, { updatedService: data.service }))
 }
 
 function createServiceOptions(taskDef, options) {
-  return {
+  const opts = {
     cluster: options.cluster,
     service: options.service,
     taskDefinition: taskDef.taskDefinitionArn
   }
-}
-
-function checkForTaskKill(ecs, ctx, options) {
-  if (options.killTask) {
-    if (options.verbose) console.info('searching for running task to stop')
-    return ecs
-      .listTasks({ cluster: options.cluster, serviceName: options.service })
-      .promise()
-      .then(
-        data => {
-          if (data && data.taskArns && data.taskArns.length) {
-            const task = data.taskArns[0]
-            if (options.verbose) console.info(`stopping task '${task}'`)
-            return ecs
-              .stopTask({
-                cluster: options.cluster,
-                task,
-                reason: 'Making room for blue/green deployment'
-              })
-              .promise()
-              .then(
-                () => {
-                  if (options.verbose) console.info(`task '${task}' stopped`)
-                },
-                error => {
-                  console.warn(`failed to stop task '${task}'`, error)
-                }
-              )
-          } else {
-            console.info('failed to find a running task to stop')
-          }
-        },
-        error => {
-          console.warn(
-            `failed to list tasks under service '${options.service}' in cluster '${options.cluster}'`,
-            error
-          )
-        }
-      )
-      .then(() => ctx)
-      .catch(() => ctx)
+  if (options.desiredCount !== undefined) {
+    opts.desiredCount = options.desiredCount
   }
-  return ctx
+  if (options.minPercent !== undefined) {
+    opts.minimumHealthyPercent = options.minPercent
+  }
+  if (options.maxPercent !== undefined) {
+    opts.maximumPercent = options.maxPercent
+  }
+  return opts
 }
 
 function waitForServiceUpdate(ecs, ctx, options) {
@@ -181,6 +153,7 @@ function waitForServiceUpdate(ecs, ctx, options) {
     const WAIT_TIME = 1000
     const MAX_TIMEOUT = options.timeout * 1000
     const START_TIME = Date.now()
+    const updatedService = ctx.updatedService
 
     function wait() {
       if (options.verbose) {
@@ -191,24 +164,25 @@ function waitForServiceUpdate(ecs, ctx, options) {
       }
       ecs
         .listTasks({
-          cluster: service.info.clusterArn,
-          serviceName: service.info.serviceName,
+          cluster: updatedService.clusterArn,
+          serviceName: updatedService.serviceName,
           desiredStatus: 'RUNNING'
         })
         .promise()
-        .then(res => {
+        .then(data => {
           const tasks = data.taskArns || []
           if (tasks.length) {
             ecs
               .describeTasks({
                 tasks,
-                cluster: service.info.clusterArn
+                cluster: updatedService.clusterArn
               })
               .promise()
-              .then(res => {
+              .then(data => {
                 const newTask = data.tasks.find(
                   task =>
-                    task.taskDefinitionArn === service.taskDef.taskDefinitionArn
+                    task.taskDefinitionArn ===
+                    ctx.targetTaskDef.taskDefinitionArn
                 )
                 if (newTask) {
                   resolve(merge(ctx, { newTask }))
@@ -219,7 +193,10 @@ function waitForServiceUpdate(ecs, ctx, options) {
                   setTimeout(wait, WAIT_TIME)
                 }
               })
-              .catch(e => resolve(merge(ctx, { error: e })))
+              .catch(e => {
+                ctx.errors.push(e)
+                resolve(ctx)
+              })
           } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
             ctx.errors.push(new TimeoutError())
             resolve(ctx)
@@ -275,3 +252,26 @@ function TimeoutError(message) {
   this.stack = new Error().stack
 }
 TimeoutError.prototype = Object.create(Error.prototype)
+
+function AssertionError(message) {
+  this.message = message
+  this.name = this.constructor.name
+  this.stack = new Error().stack
+}
+AssertionError.prototype = Object.create(Error.prototype)
+
+function assert(value, message) {
+  if (!value) throw new AssertionError(message)
+}
+
+if (typeof process !== 'undefined' && !!process.env.TEST) {
+  exports.getService = getService
+  exports.getActiveTaskDefinition = getActiveTaskDefinition
+  exports.addNewTaskDefinition = addNewTaskDefinition
+  exports.newTaskDefinition = newTaskDefinition
+  exports.parseImagePath = parseImagePath
+  exports.updateServiceTaskDef = updateServiceTaskDef
+  exports.updateService = updateService
+  exports.createServiceOptions = createServiceOptions
+  exports.waitForServiceUpdate = waitForServiceUpdate
+}

@@ -11,16 +11,6 @@ Sequence of steps performed by the script:
 1. Update the service to use this new task definition, triggering a blue/green deployment.
 1. If the update fails, roll the service back to the previous task definition.
 
-#### Spare Capacity
-
-In order to roll a blue/green deployment there must be spare capacity available to spin up a task based on your updated task
-definition. If there's not capacity to do this your deployment will fail.
-
-An alternate option provided by this tool is `--kill-task`. This will attempt to stop an existing task, making way for the blue/green rollout.
-
-This has obvious implications, reducing your inital scale by one during the deployment. If you're only running a single task
-you'll experience some down time. **Use at your own risk.**
-
 #### Usage
 
     ecs-task-deploy [options]
@@ -37,7 +27,6 @@ you'll experience some down time. **Use at your own risk.**
     -i, --image <i>           docker image for task definition, or via AWS_ECS_TASK_IMAGE env variable
     -t, --timeout <t>         max timeout (sec) for ECS service to launch new task, defaults to 90s
     -v, --verbose             enable verbose mode
-    --kill-task               stop a running task to allow space for a rolling blue/green deployment
 
 ##### Node
 
@@ -69,8 +58,7 @@ ecsTaskDeploy({
   region: 'us-east-1',
   cluster: 'cache-cluster',
   service: 'cache-service',
-  image: 'redis:2.8',
-  killTask: true
+  image: 'redis:2.8'
 })
 .then(
   newTask => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`), 

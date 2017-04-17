@@ -50,11 +50,22 @@ program
     parseInt,
     '180'
   )
-  .option('-v, --verbose', 'enable verbose mode')
   .option(
-    '--kill-task',
-    'stop a running task to allow space for a rolling blue/green deployment'
+    '-dc, --desiredCount <c>',
+    'desired number of tasks to instantiate and keep running in the service. Defaults to value defined previously in the service.',
+    parseInt
   )
+  .option(
+    '-mp, --minPercent <c>',
+    'percentage of running tasks that must remain in the RUNNING state in a service during a deployment. Defaults to value defined previously in the service.',
+    parseInt
+  )
+  .option(
+    '-mp, --maxPercent <c>',
+    'percentage of tasks that are allowed in the RUNNING or PENDING state in a service during a deployment. Defaults to value defined previously in the service.',
+    parseInt
+  )
+  .option('-v, --verbose', 'enable verbose mode')
   .parse(process.argv)
 
 execute(program).then(ctx => complete(ctx), e => error([e]))
