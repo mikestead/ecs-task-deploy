@@ -54,18 +54,51 @@ test('should timeout if service is not running new task with task definition', (
     timeout: 0
   }
 
-  const listTasks2 = jest.fn(() => ({
+  const listTasks = jest.fn(() => ({
     promise: p => Promise.resolve({ taskArns: [] })
   }))
 
   const ecs = {
-    listTasks: listTasks2
+    listTasks
   }
 
-  const listTasks = jest.fn()
-  listTasks.mockReturnValueOnce({
-    promise: p => Promise.resolve({ taskArns: [] })
+  return waitForServiceUpdate(ecs, ctx, options).then(ctx2 => {
+    expect(ctx2.newTask).toBeUndefined()
+    expect(ctx2.errors.length).toBe(1)
   })
+})
+
+test("should timeout if can't describe new task", () => {
+  const options = {
+    timeout: 0
+  }
+
+  const listTasks = jest.fn().mockReturnValue({
+    promise: p =>
+      Promise.resolve({
+        tasks: [
+          {
+            taskDefinitionArn: 'arn-unknown'
+          }
+        ]
+      })
+  })
+
+  const describeTasks = jest.fn({
+    promise: p =>
+      Promise.resolve({
+        tasks: [
+          {
+            taskDefinitionArn: 'arn-unknown'
+          }
+        ]
+      })
+  })
+
+  const ecs = {
+    listTasks,
+    describeTasks
+  }
 
   return waitForServiceUpdate(ecs, ctx, options).then(ctx2 => {
     expect(ctx2.newTask).toBeUndefined()
