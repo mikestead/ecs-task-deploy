@@ -39,6 +39,6 @@
     "commander": "^2.9.0"
   },
   "devDependencies": {
-    "eslint": "^3.18.0"
+    "eslint": "^4.1.0"
   }
 }
