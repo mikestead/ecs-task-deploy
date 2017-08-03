@@ -29,7 +29,7 @@ function toKvps(val, map) {
   if (i < 1) return map
   const name = val.slice(0, i)
   const value = val.slice(i+1)
-  map[key] = value
+  map[name] = value
   return map
 }
 

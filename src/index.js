@@ -76,9 +76,9 @@ function newTaskDefinition(template, options) {
     containerDefinitions
   }
 }
-/**
- * Overwrites an env variable if it exists, adds it if it doesn't
- */
+/*
+Overwrites an env variable if it exists, adds it if it doesn't
+*/
 function getEnvVariables(existing, options) {
   if (!options.env.length) return existing
   const vars = existing || []

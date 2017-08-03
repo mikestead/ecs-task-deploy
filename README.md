@@ -12,8 +12,7 @@ Sequence of steps performed by the script:
 
 #### Environment Varaiables
 
-For all the container definitions found when looking up your defined `image`, you have the option to add or update environment variables
-for these.
+For all the container definitions found when looking up your defined `image`, you have the option to add or update environment variables for these.
 
 This can be done using the `--env` option.
 
