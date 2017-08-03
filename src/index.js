@@ -24,6 +24,11 @@ function verifyOptions(options) {
     options.image = parseImagePath(options.image)
     if (!options.timeout) options.timeout = 180
 
+    // convert our env variable map into an array to closer match ECS task def format
+    options.env = options.env
+        ? Object.keys(options.env).map(name => ({ name, value: options.env[name] }))
+        : []
+  
     return Promise.resolve(options)
   } catch(e) {
     return Promise.reject(e)
@@ -60,13 +65,30 @@ function newTaskDefinition(template, options) {
   const containerDefinitions = template.containerDefinitions.map(c => Object.assign({}, c))
   const containers = containerDefinitions.filter(c => parseImagePath(c.image).id === options.image.id)
   assert.ok(containers.length, `No container definitions found with image '${options.image.id}', aborting.`)
-  containers.forEach(c => c.image = options.image.uri)
+  containers.forEach(c => {
+    c.image = options.image.uri
+    c.environment = getEnvVariables(c.environment, options)
+  })
 
   return {
     family: template.family,
     volumes: template.volumes,
     containerDefinitions
   }
+}
+/**
+ * Overwrites an env variable if it exists, adds it if it doesn't
+ */
+function getEnvVariables(existing, options) {
+  if (!options.env.length) return existing
+  const vars = existing || []
+  options.env.forEach(env => {
+    const copy = Object.assign({}, env)
+    const i = vars.findIndex(v => v.name === copy.name)
+    if (~i) vars[i] = copy
+    else vars.push(copy)
+  })
+  return vars
 }
 
 function parseImagePath(uri) {
