@@ -1,4 +1,4 @@
-FROM nodesource/centos7:5.3.0
+FROM node:6.11.2-alpine
 
 MAINTAINER Mike Stead <stead.mike@gmail.com>
 
