@@ -10,15 +10,25 @@ Sequence of steps performed by the script:
 1. Register this new task definition with ECS.
 1. Update the service to use this new task definition, triggering a blue/green deployment.
 
+#### Environment Varaiables
+
+For all the container definitions found when looking up your defined `image`, you have the option to add or update environment variables for these.
+
+This can be done using the `--env` option.
+
+    --env "SERVICE_URL=http://api.somedomain.com"
+
+You can supply as many of these as required.
+
 #### Spare Capacity
 
 In order to roll a blue/green deployment there must be spare capacity available to spin up a task based on your updated task definition.
 If there's not capacity to do this your deployment will fail.
 
-An alternate option provided by this tool is `--kill-task`. This will attempt to stop an existing task, making way for the blue/green rollout.
+This can be done via ECS service `minimum healthy percent` but as a brute force option this tool supports `--kill-task`.
+This will attempt to stop an existing task, making way for the blue/green rollout.
 
-This has obvious implications, reducing your horizontal scale by one during the deployment. If you're only running a single task
-you'll experience some down time. **Use at your own risk.**
+If you're only running a single task you'll experience some down time. **Use at your own risk.**
 
 #### Usage
 
@@ -36,6 +46,7 @@ you'll experience some down time. **Use at your own risk.**
     -i, --image <i>           docker image for task definition, or via AWS_ECS_TASK_IMAGE env variable
     -t, --timeout <t>         max timeout (sec) for ECS service to launch new task, defaults to 90s
     -v, --verbose             enable verbose mode
+    -e, --env <e>             environment variable in "<key>=<value>" format  
     --kill-task               stop a running task to allow space for a rolling blue/green deployment
 
 ##### Node
@@ -52,6 +63,8 @@ ecs-task-deploy \
     -c 'qa' \
     -n 'website-service' \
     -i '44444444.ddd.ecr.us-east-1.amazonaws.com/website:1.0.2' \
+    -e 'SERVICE_URL=http://api.somedomain.com' \
+    -e 'API_KEY=clientapikey' \
     -v
 ```
 
@@ -69,7 +82,10 @@ ecsTaskDeploy({
   cluster: 'cache-cluster',
   service: 'cache-service',
   image: 'redis:2.8',
-  killTask: true
+  env: {
+    SERVICE_URL: 'http://api.somedomain.com',
+    API_KEY: 'clientapikey'
+  }
 })
 .then(
   newTask => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`), 
