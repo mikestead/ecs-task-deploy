@@ -1,5 +1,7 @@
 # ECS Task Deploy
 
+[![Build Status](https://travis-ci.org/mikestead/ecs-task-deploy.svg?branch=greenkeeper%2Fcommander-2.10.0)](https://travis-ci.org/mikestead/ecs-task-deploy)
+
 A script to increment an active task definition on [ECS](https://aws.amazon.com/ecs) with an updated Docker image, followed by a service update to use it.
 
 Sequence of steps performed by the script:
