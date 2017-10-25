@@ -74,7 +74,7 @@ function newTaskDefinition(template, options) {
     family: template.family,
     volumes: template.volumes,
     containerDefinitions,
-	  taskRoleArn: template.taskRoleArn
+    taskRoleArn: template.taskRoleArn
   }
 }
 /*
