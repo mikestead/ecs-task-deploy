@@ -28,7 +28,7 @@ function verifyOptions(options) {
     options.env = options.env
         ? Object.keys(options.env).map(name => ({ name, value: options.env[name] }))
         : []
-  
+
     return Promise.resolve(options)
   } catch(e) {
     return Promise.reject(e)
@@ -73,7 +73,8 @@ function newTaskDefinition(template, options) {
   return {
     family: template.family,
     volumes: template.volumes,
-    containerDefinitions
+    containerDefinitions,
+	  taskRoleArn: template.taskRoleArn
   }
 }
 /*
