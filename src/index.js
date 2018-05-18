@@ -49,8 +49,8 @@ function getService(ecs, options) {
   return ecs.describeServices({ cluster: options.cluster, services: [ options.service ] }).promise()
       .then(res => res.data.services.find(service => service.serviceName == options.service))
       .then(service => {
-         assert.ok(service, `Service ${options.service} not found, aborting.`)
-         return service
+        assert.ok(service, `Service ${options.service} not found, aborting.`)
+        return service
       })
 }
 
