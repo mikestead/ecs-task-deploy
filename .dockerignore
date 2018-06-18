@@ -1,4 +1,8 @@
 .idea
 .git
+.DS_Store
+bin
+coverage
+auth.js
 node_modules
 npm-debug.log
