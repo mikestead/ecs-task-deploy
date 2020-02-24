@@ -7,7 +7,7 @@ the following features:
 - preserves `exetutionRoleArn`s in task definitions(was previously stripped out)
 - allows updating stand-alone task-definitions without service
 
-## What it does?
+## What does it do?
 
 Sequence of steps performed by the script:
 
@@ -17,7 +17,7 @@ Sequence of steps performed by the script:
 1. Register this new task definition with ECS.
 1. Update the service to use this new task definition, triggering a blue/green deployment.
 
-## How to use?
+## How to use
 
 ```sh
 npm i @valiton/ecs-task-deploy
