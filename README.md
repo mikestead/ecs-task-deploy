@@ -45,7 +45,7 @@ If you're only running a single task you'll experience some down time. **Use at 
     -r, --region <r>          aws region, or via AWS_DEFAULT_REGION env variable.
     -c, --cluster <c>         ecs cluster, or via AWS_ECS_CLUSTER env variable
     -n, --service <n>         ecs service, or via AWS_ECS_SERVICE_NAME env variable
-    -d, --task-def <n>        task definition name, only needed when service and cluster are not given. can be defined via AWS_ECS_TASK_DEF env variable
+    -d, --task-def <d>        task definition name, only needed when service and cluster are not given. can be defined via AWS_ECS_TASK_DEF env variable
     -i, --image <i>           docker image for task definition, or via AWS_ECS_TASK_IMAGE env variable
     -t, --timeout <t>         max timeout (sec) for ECS service to launch new task, defaults to 90s
     -v, --verbose             enable verbose mode
