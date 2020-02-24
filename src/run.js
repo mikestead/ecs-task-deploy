@@ -13,7 +13,7 @@ program
   .option('-r, --region <r>', 'aws region, can be defined via AWS_DEFAULT_REGION env variable.', String, env.AWS_DEFAULT_REGION)
   .option('-c, --cluster <c>', 'only needed for services, ecs cluster, can be defined via AWS_ECS_CLUSTER env variable', String, env.AWS_ECS_CLUSTER)
   .option('-n, --service <n>', 'only needed for ecs service, can be defined via AWS_ECS_SERVICE_NAME env variable', String, env.AWS_ECS_SERVICE_NAME)
-  .option('-t, --task-def <n>', 'task definition, only needed when service and cluster are not given. can be defined via AWS_ECS_TASK_DEF env variable', String, env.AWS_ECS_TASK_DEF)
+  .option('-d, --task-def <n>', 'task definition, only needed when service and cluster are not given. can be defined via AWS_ECS_TASK_DEF env variable', String, env.AWS_ECS_TASK_DEF)
   .option('-i, --image <i>', 'docker image to use in new task definition e.g. user/image:tag, can be defined via AWS_ECS_TASK_IMAGE env variable', String, env.AWS_ECS_TASK_IMAGE)
   .option('-t, --timeout <t>', 'maximum timeout (sec) to wait for ECS service to launch new task, defaults to 180', parseInt, '180')
   .option('-v, --verbose', 'enable verbose mode')

@@ -45,18 +45,22 @@ If you're only running a single task you'll experience some down time. **Use at 
     -r, --region <r>          aws region, or via AWS_DEFAULT_REGION env variable.
     -c, --cluster <c>         ecs cluster, or via AWS_ECS_CLUSTER env variable
     -n, --service <n>         ecs service, or via AWS_ECS_SERVICE_NAME env variable
+    -d, --task-def <n>        task definition name, only needed when service and cluster are not given. can be defined via AWS_ECS_TASK_DEF env variable
     -i, --image <i>           docker image for task definition, or via AWS_ECS_TASK_IMAGE env variable
     -t, --timeout <t>         max timeout (sec) for ECS service to launch new task, defaults to 90s
     -v, --verbose             enable verbose mode
-    -e, --env <e>             environment variable in "<key>=<value>" format  
+    -e, --env <e>             environment variable in "<key>=<value>" format
     --kill-task               stop a running task to allow space for a rolling blue/green deployment
 
 ##### Node
 
+**Hint: You can pass a service OR a task definition name. If a service is passed
+ that service will be updated, otherwise only the given task definition.**
+
 To run via cli.
 
     npm install -g ecs-task-deploy
-    
+
 ```javascript
 ecs-task-deploy \
     -k 'ABCD' \
@@ -90,7 +94,7 @@ ecsTaskDeploy({
   }
 })
 .then(
-  newTask => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`), 
+  newTask => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`),
   e => console.error(e)
 )
 ```
