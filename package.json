@@ -1,6 +1,6 @@
 {
-  "name": "ecs-task-deploy",
-  "version": "1.3.1",
+  "name": "@valiton/ecs-task-deploy",
+  "version": "1.4.0",
   "description": "Update an ECS task definition with Docker image and trigger blue/green deployment",
   "keywords": [
     "aws",
@@ -8,18 +8,21 @@
     "deploy",
     "docker"
   ],
+  "files": [
+    "src/"
+  ],
   "author": {
-    "name": "Mike Stead",
+    "name": "Valiton",
     "url": "https://github.com/mikestead"
   },
   "license": "MIT",
-  "homepage": "https://github.com/mikestead/ecs-task-deploy",
+  "homepage": "https://github.com/valiton/ecs-task-deploy",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mikestead/ecs-task-deploy.git"
+    "url": "https://github.com/valiton/ecs-task-deploy.git"
   },
   "bugs": {
-    "url": "https://github.com/mikestead/ecs-task-deploy/issues"
+    "url": "https://github.com/valiton/ecs-task-deploy/issues"
   },
   "engines": {
     "node": ">=4.0.0",

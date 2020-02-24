@@ -15,8 +15,6 @@ function verifyOptions(options) {
     assert.ok(options.awsAccessKey, 'AWS access key missing')
     assert.ok(options.awsSecretKey, 'AWS secret key missing')
     assert.ok(options.region, 'AWS region missing')
-    assert.ok(options.cluster, 'ECS cluster name missing')
-    assert.ok(options.service, 'ECS service name missing')
     assert.ok(options.image, 'ECS image name missing')
 
     process.env.AWS_ACCESS_KEY_ID = options.awsAccessKey
@@ -37,8 +35,18 @@ function verifyOptions(options) {
 
 function deployTaskDefinition(options) {
   const ecs = new AWS.ECS({ region: options.region })
+  if (!options.service) {
+    assert.ok(options.taskDef, 'No service or task definition given.')
+    console.info('No service given, updating the standalone task definition')
+    return getTaskDefinition(ecs, options.taskDef, options)
+      .then(taskDefTemplate =>  addNewTaskDefinition(ecs, taskDefTemplate, options))
+  }
+
+  assert.ok(options.cluster, 'ECS cluster name missing')
+  assert.ok(options.service, 'ECS service name missing')
+  console.info('service given, updating service')
   return getService(ecs, options)
-    .then(service => getActiveTaskDefinition(ecs, service, options))
+    .then(service => getTaskDefinition(ecs, service, options))
     .then(taskDef => addNewTaskDefinition(ecs, taskDef, options))
     .then(taskDef => updateService(ecs, taskDef, options))
     .then(service => checkForTaskKill(ecs, service, options))
@@ -54,9 +62,9 @@ function getService(ecs, options) {
       })
 }
 
-function getActiveTaskDefinition(ecs, service, options) {
-  if (options.verbose) console.info('get active task definition')
-  return ecs.describeTaskDefinition({ taskDefinition: service.taskDefinition }).promise().then(res => res.data.taskDefinition)
+function getTaskDefinition(ecs, taskDef, options) {
+  if (options.verbose) console.info('get task definition')
+  return ecs.describeTaskDefinition({ taskDefinition: taskDef }).promise().then(res => res.data.taskDefinition)
 }
 
 function addNewTaskDefinition(ecs, template, options) {

@@ -1,8 +1,13 @@
 # ECS Task Deploy
 
-[![Build Status](https://travis-ci.org/mikestead/ecs-task-deploy.svg?branch=greenkeeper%2Fcommander-2.10.0)](https://travis-ci.org/mikestead/ecs-task-deploy)
-
 A script to increment an active task definition on [ECS](https://aws.amazon.com/ecs) with an updated Docker image, followed by a service update to use it.
+
+Originally forked from [`mikestead/ecs-task-deploy`](https://github.com/mikestead/ecs-task-deploy) and extended with
+the following features:
+- preserves `exetutionRoleArn`s in task definitions(was previously stripped out)
+- allows updating stand-alone task-definitions without service
+
+## What does it do?
 
 Sequence of steps performed by the script:
 
@@ -12,7 +17,13 @@ Sequence of steps performed by the script:
 1. Register this new task definition with ECS.
 1. Update the service to use this new task definition, triggering a blue/green deployment.
 
-#### Environment Varaiables
+## How to use
+
+```sh
+npm i @valiton/ecs-task-deploy
+```
+
+### Environment Varaiables
 
 For all the container definitions found when looking up your defined `image`, you have the option to add or update environment variables for these.
 
@@ -22,7 +33,7 @@ This can be done using the `--env` option.
 
 You can supply as many of these as required.
 
-#### Spare Capacity
+## Spare Capacity
 
 In order to roll a blue/green deployment there must be spare capacity available to spin up a task based on your updated task definition.
 If there's not capacity to do this your deployment will fail.
@@ -45,18 +56,22 @@ If you're only running a single task you'll experience some down time. **Use at 
     -r, --region <r>          aws region, or via AWS_DEFAULT_REGION env variable.
     -c, --cluster <c>         ecs cluster, or via AWS_ECS_CLUSTER env variable
     -n, --service <n>         ecs service, or via AWS_ECS_SERVICE_NAME env variable
+    -d, --task-def <d>        task definition name, only needed when service and cluster are not given. can be defined via AWS_ECS_TASK_DEF env variable
     -i, --image <i>           docker image for task definition, or via AWS_ECS_TASK_IMAGE env variable
     -t, --timeout <t>         max timeout (sec) for ECS service to launch new task, defaults to 90s
     -v, --verbose             enable verbose mode
-    -e, --env <e>             environment variable in "<key>=<value>" format  
+    -e, --env <e>             environment variable in "<key>=<value>" format
     --kill-task               stop a running task to allow space for a rolling blue/green deployment
+
+**Hint: You can pass a service OR a task definition name. If a service is passed
+ that service will be updated, otherwise only the given task definition.**
 
 ##### Node
 
 To run via cli.
 
     npm install -g ecs-task-deploy
-    
+
 ```javascript
 ecs-task-deploy \
     -k 'ABCD' \
@@ -90,7 +105,7 @@ ecsTaskDeploy({
   }
 })
 .then(
-  newTask => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`), 
+  newTask => console.info(`Task '${newTask.taskDefinitionArn}' created and deployed`),
   e => console.error(e)
 )
 ```
@@ -117,3 +132,4 @@ Run with standard AWS environment variables.
         -c <cluster> \
         -n <service-name> \
         -i <image-name>
+
