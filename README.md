@@ -52,10 +52,10 @@ If you're only running a single task you'll experience some down time. **Use at 
     -e, --env <e>             environment variable in "<key>=<value>" format
     --kill-task               stop a running task to allow space for a rolling blue/green deployment
 
-##### Node
-
 **Hint: You can pass a service OR a task definition name. If a service is passed
  that service will be updated, otherwise only the given task definition.**
+
+##### Node
 
 To run via cli.
 
@@ -121,3 +121,7 @@ Run with standard AWS environment variables.
         -c <cluster> \
         -n <service-name> \
         -i <image-name>
+
+## Credits
+
+Forked from [`mikestead/ecs-task-deploy`](https://github.com/mikestead/ecs-task-deploy)
