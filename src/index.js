@@ -1,6 +1,6 @@
 'use strict'
 
-const AWS = require('aws-sdk-promise')
+const AWS = require('aws-sdk')
 const assert = require('assert')
 
 module.exports = execute
@@ -15,8 +15,6 @@ function verifyOptions(options) {
     assert.ok(options.awsAccessKey, 'AWS access key missing')
     assert.ok(options.awsSecretKey, 'AWS secret key missing')
     assert.ok(options.region, 'AWS region missing')
-    assert.ok(options.cluster, 'ECS cluster name missing')
-    assert.ok(options.service, 'ECS service name missing')
     assert.ok(options.image, 'ECS image name missing')
 
     process.env.AWS_ACCESS_KEY_ID = options.awsAccessKey
@@ -37,8 +35,18 @@ function verifyOptions(options) {
 
 function deployTaskDefinition(options) {
   const ecs = new AWS.ECS({ region: options.region })
+  if (!options.service) {
+    assert.ok(options.taskDef, 'No service or task definition given.')
+    console.info('No service given, updating the standalone task definition')
+    return getTaskDefinition(ecs, options.taskDef, options)
+      .then(taskDefTemplate =>  addNewTaskDefinition(ecs, taskDefTemplate, options))
+  }
+
+  assert.ok(options.cluster, 'ECS cluster name missing')
+  assert.ok(options.service, 'ECS service name missing')
+  console.info('service given, updating service')
   return getService(ecs, options)
-    .then(service => getActiveTaskDefinition(ecs, service, options))
+    .then(service => getTaskDefinition(ecs, service.taskDefinition, options))
     .then(taskDef => addNewTaskDefinition(ecs, taskDef, options))
     .then(taskDef => updateService(ecs, taskDef, options))
     .then(service => checkForTaskKill(ecs, service, options))
@@ -47,22 +55,22 @@ function deployTaskDefinition(options) {
 
 function getService(ecs, options) {
   return ecs.describeServices({ cluster: options.cluster, services: [ options.service ] }).promise()
-      .then(res => res.data.services.find(service => service.serviceName == options.service))
+      .then(res => res.services.find(service => service.serviceName == options.service))
       .then(service => {
         assert.ok(service, `Service ${options.service} not found, aborting.`)
         return service
       })
 }
 
-function getActiveTaskDefinition(ecs, service, options) {
-  if (options.verbose) console.info('get active task definition')
-  return ecs.describeTaskDefinition({ taskDefinition: service.taskDefinition }).promise().then(res => res.data.taskDefinition)
+function getTaskDefinition(ecs, taskDef, options) {
+  if (options.verbose) console.info('get task definition')
+  return ecs.describeTaskDefinition({ taskDefinition: taskDef }).promise().then(res => res.taskDefinition)
 }
 
 function addNewTaskDefinition(ecs, template, options) {
   if (options.verbose) console.info(`registering new task definition with image '${options.image.uri}'`)
   const newTaskDef = newTaskDefinition(template, options)
-  return ecs.registerTaskDefinition(newTaskDef).promise().then(res => res.data.taskDefinition)
+  return ecs.registerTaskDefinition(newTaskDef).promise().then(res => res.taskDefinition)
 }
 
 function newTaskDefinition(template, options) {
@@ -78,7 +86,8 @@ function newTaskDefinition(template, options) {
     family: template.family,
     volumes: template.volumes,
     containerDefinitions,
-    taskRoleArn: template.taskRoleArn
+    taskRoleArn: template.taskRoleArn,
+    executionRoleArn: template.executionRoleArn
   }
 }
 /*
@@ -108,7 +117,7 @@ function parseImagePath(uri) {
 function updateService(ecs, taskDef, options) {
   if (options.verbose) console.info(`update service with new task definition '${taskDef.taskDefinitionArn}'`)
   const serviceOptions = createServiceOptions(taskDef, options)
-  return ecs.updateService(serviceOptions).promise().then(res => ({ info: res.data.service, taskDef }))
+  return ecs.updateService(serviceOptions).promise().then(res => ({ info: res.service, taskDef }))
 }
 
 function createServiceOptions(taskDef, options) {
@@ -123,8 +132,8 @@ function checkForTaskKill(ecs, service, options) {
   if (options.killTask) {
     if (options.verbose) console.info('searching for running task to stop')
     return ecs.listTasks({ cluster: options.cluster, serviceName: options.service }).promise().then(res => {
-      if (res.data && res.data.taskArns && res.data.taskArns.length) {
-        const task = res.data.taskArns[0]
+      if (res.taskArns && res.taskArns.length) {
+        const task = res.taskArns[0]
         if (options.verbose) console.info(`stopping task '${task}'`)
         return ecs.stopTask({ cluster: options.cluster, task, reason: 'Making room for blue/green deployment' }).promise()
           .then(() => {
@@ -160,13 +169,13 @@ function waitForServiceUpdate(ecs, service, options) {
         serviceName: service.info.serviceName,
         desiredStatus: 'RUNNING'
       }).promise().then(res => {
-        const tasks = res.data.taskArns || []
+        const tasks = res.taskArns || []
         if (tasks.length) {
           ecs.describeTasks({
             tasks,
             cluster: service.info.clusterArn
           }).promise().then(res => {
-            const task = res.data.tasks.find(task => task.taskDefinitionArn === service.taskDef.taskDefinitionArn)
+            const task = res.tasks.find(task => task.taskDefinitionArn === service.taskDef.taskDefinitionArn)
             if (task) {
               resolve(task)
             } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
