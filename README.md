@@ -43,7 +43,7 @@ This will attempt to stop an existing task, making way for the blue/green rollou
 
 If you're only running a single task you'll experience some down time. **Use at your own risk.**
 
-#### Usage
+## Usage
 
     ecs-task-deploy [options]
 
@@ -66,7 +66,7 @@ If you're only running a single task you'll experience some down time. **Use at 
 **Hint: You can pass a service OR a task definition name. If a service is passed
  that service will be updated, otherwise only the given task definition.**
 
-##### Node
+### CLI
 
 To run via cli.
 
@@ -87,10 +87,14 @@ ecs-task-deploy \
 
 To run in code.
 
-    npm install ecs-task-deploy --save
+```sh
+npm install @valiton/ecs-task-deploy
+```
+
+### Node API
 
 ```javascript
-const ecsTaskDeploy = require('ecs-task-deploy')
+const ecsTaskDeploy = require('@valiton/ecs-task-deploy');
 
 ecsTaskDeploy({
   awsAccessKey: 'ABCD',
@@ -109,27 +113,4 @@ ecsTaskDeploy({
   e => console.error(e)
 )
 ```
-
-##### Docker
-
-Run with arguments.
-
-    docker run --rm stead/ecs-task-deploy \
-        -k <key> \
-        -s <secret> \
-        -r <region> \
-        -c <cluster> \
-        -n <service-name> \
-        -i <image-name>
-
-Run with standard AWS environment variables.
-
-    docker run --rm \
-        -e AWS_DEFAULT_REGION=<region>  \
-        -e AWS_ACCESS_KEY_ID=<key> \
-        -e AWS_SECRET_ACCESS_KEY=<secret>  \
-        stead/ecs-task-deploy \
-        -c <cluster> \
-        -n <service-name> \
-        -i <image-name>
 
