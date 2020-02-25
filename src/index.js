@@ -46,7 +46,7 @@ function deployTaskDefinition(options) {
   assert.ok(options.service, 'ECS service name missing')
   console.info('service given, updating service')
   return getService(ecs, options)
-    .then(service => getTaskDefinition(ecs, service, options))
+    .then(service => getTaskDefinition(ecs, service.taskDefinition, options))
     .then(taskDef => addNewTaskDefinition(ecs, taskDef, options))
     .then(taskDef => updateService(ecs, taskDef, options))
     .then(service => checkForTaskKill(ecs, service, options))
