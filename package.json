@@ -1,6 +1,6 @@
 {
   "name": "@valiton/ecs-task-deploy",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Update an ECS task definition with Docker image and trigger blue/green deployment",
   "keywords": [
     "aws",
