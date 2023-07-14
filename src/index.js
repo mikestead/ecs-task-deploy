@@ -24,8 +24,8 @@ function verifyOptions(options) {
 
     // convert our env variable map into an array to closer match ECS task def format
     options.env = options.env
-        ? Object.keys(options.env).map(name => ({ name, value: options.env[name] }))
-        : []
+      ? Object.keys(options.env).map(name => ({ name, value: options.env[name] }))
+      : []
 
     return Promise.resolve(options)
   } catch(e) {
@@ -55,16 +55,17 @@ function deployTaskDefinition(options) {
 
 function getService(ecs, options) {
   return ecs.describeServices({ cluster: options.cluster, services: [ options.service ] }).promise()
-      .then(res => res.services.find(service => service.serviceName == options.service))
-      .then(service => {
-        assert.ok(service, `Service ${options.service} not found, aborting.`)
-        return service
-      })
+    .then(res => res.services.find(service => service.serviceName == options.service))
+    .then(service => {
+      assert.ok(service, `Service ${options.service} not found, aborting.`)
+      return service
+    })
 }
 
 function getTaskDefinition(ecs, taskDef, options) {
   if (options.verbose) console.info('get task definition')
-  return ecs.describeTaskDefinition({ taskDefinition: taskDef }).promise().then(res => res.taskDefinition)
+  const taskDefinition = options.useLatestTaskDefinition ? options.service : taskDef
+  return ecs.describeTaskDefinition({ taskDefinition }).promise().then(res => res.taskDefinition)
 }
 
 function addNewTaskDefinition(ecs, template, options) {
@@ -147,8 +148,8 @@ function checkForTaskKill(ecs, service, options) {
     }, (error) => {
       console.warn(`failed to list tasks under service '${options.service}' in cluster '${options.cluster}'`, error)
     })
-    .then(() => service)
-    .catch(() => service)
+      .then(() => service)
+      .catch(() => service)
   }
   return service
 }
@@ -184,7 +185,7 @@ function waitForServiceUpdate(ecs, service, options) {
               setTimeout(wait, WAIT_TIME)
             }
           })
-          .catch(e => reject(e))
+            .catch(e => reject(e))
         } else if (Date.now() - START_TIME > MAX_TIMEOUT) {
           reject(new Error('timeout waiting for service to launch new task definition'))
         } else {
