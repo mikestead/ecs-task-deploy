@@ -19,6 +19,7 @@ program
   .option('-v, --verbose', 'enable verbose mode')
   .option('-e, --env <e>', 'environment variable in "<key>=<value>" format', toKvps, {})
   .option('--kill-task', 'stop a running task to allow space for a rolling blue/green deployment')
+  .option('--use-latest-task-definition', 'uses the latest revision of the task definition. default is to use the current running task definition')
   .parse(process.argv)
 
 execute(program)
